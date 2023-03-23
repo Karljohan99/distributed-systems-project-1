@@ -13,7 +13,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0ftictactoe.proto\"5\n\x0fGreetingMessage\x12\x11\n\tsender_id\x18\x01 \x01(\x05\x12\x0f\n\x07message\x18\x02 \x01(\t\"J\n\x10GreetingResponse\x12\x14\n\x0cresponder_id\x18\x01 \x01(\x05\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x0f\n\x07success\x18\x03 \x01(\x08\"9\n\x0f\x45lectionMessage\x12\x11\n\tsender_id\x18\x01 \x01(\x05\x12\x13\n\x0b\x65lection_id\x18\x02 \x01(\x05\"4\n\x0e\x45lectionResult\x12\x11\n\tleader_id\x18\x01 \x01(\x05\x12\x0f\n\x07success\x18\x02 \x01(\x08\x32x\n\tTicTacToe\x12\x35\n\x0cSendGreeting\x12\x10.GreetingMessage\x1a\x11.GreetingResponse\"\x00\x12\x34\n\rStartElection\x12\x10.ElectionMessage\x1a\x0f.ElectionResult\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0ftictactoe.proto\"5\n\x0fGreetingMessage\x12\x11\n\tsender_id\x18\x01 \x01(\x05\x12\x0f\n\x07message\x18\x02 \x01(\t\"J\n\x10GreetingResponse\x12\x14\n\x0cresponder_id\x18\x01 \x01(\x05\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x0f\n\x07success\x18\x03 \x01(\x08\"#\n\x0f\x45lectionMessage\x12\x10\n\x08prev_ids\x18\x01 \x03(\x05\"4\n\x0e\x45lectionResult\x12\x11\n\tleader_id\x18\x01 \x01(\x05\x12\x0f\n\x07success\x18\x02 \x01(\x08\"\x1e\n\x0bGameRequest\x12\x0f\n\x07\x63ommand\x18\x01 \x01(\t\"/\n\x0cGameResponse\x12\x10\n\x08response\x18\x01 \x01(\t\x12\r\n\x05\x62oard\x18\x02 \x03(\t2\x9f\x01\n\tTicTacToe\x12\x35\n\x0cSendGreeting\x12\x10.GreetingMessage\x1a\x11.GreetingResponse\"\x00\x12\x34\n\rStartElection\x12\x10.ElectionMessage\x1a\x0f.ElectionResult\"\x00\x12%\n\x04Game\x12\x0c.GameRequest\x1a\r.GameResponse\"\x00\x62\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'tictactoe_pb2', globals())
@@ -25,9 +25,13 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _GREETINGRESPONSE._serialized_start=74
   _GREETINGRESPONSE._serialized_end=148
   _ELECTIONMESSAGE._serialized_start=150
-  _ELECTIONMESSAGE._serialized_end=207
-  _ELECTIONRESULT._serialized_start=209
-  _ELECTIONRESULT._serialized_end=261
-  _TICTACTOE._serialized_start=263
-  _TICTACTOE._serialized_end=383
+  _ELECTIONMESSAGE._serialized_end=185
+  _ELECTIONRESULT._serialized_start=187
+  _ELECTIONRESULT._serialized_end=239
+  _GAMEREQUEST._serialized_start=241
+  _GAMEREQUEST._serialized_end=271
+  _GAMERESPONSE._serialized_start=273
+  _GAMERESPONSE._serialized_end=320
+  _TICTACTOE._serialized_start=323
+  _TICTACTOE._serialized_end=482
 # @@protoc_insertion_point(module_scope)
