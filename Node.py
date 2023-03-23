@@ -2,13 +2,35 @@ import grpc
 from concurrent import futures
 import time
 import sys
-
+from tictactoe import TicTacToe
 import tictactoe_pb2
 import tictactoe_pb2_grpc
 
 class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
     def __init__(self):
         self.id = int(sys.argv[1])
+        self.game = TicTacToe()
+        
+        
+    def GameRequest(self, request, context):
+        cmd = request.command
+        cmd = cmd.split()
+        base_cmd = cmd[0].strip()
+        if base_cmd == "Set-Symbol":
+            move = cmd[1].split(',')
+            pos = move[0].strip()
+            player = move[1].strip()
+            if self.game.make_move(pos, player):
+                return tictactoe_pb2.GameResponse(response="OK", board=self.game.get_board())
+            else:
+                return tictactoe_pb2.GameResponse(response="FAIL")
+        elif base_cmd == "List-Board":
+            return tictactoe_pb2.GameResponse(response="OK", board=self.game.get_board())
+        elif base_cmd == "Set-node-time":
+            pass
+        else:
+            print("Unknown command")
+        
         
     def SendGreeting(self, request, context):
         response = tictactoe_pb2.GreetingResponse(responder_id=self.id, message="Hello there!", success=True)
