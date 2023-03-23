@@ -3,6 +3,7 @@ syntax = "proto3";
 service TicTacToe {
   rpc SendGreeting(GreetingMessage) returns (GreetingResponse) {}
   rpc StartElection(ElectionMessage) returns (ElectionResult) {}
+  rpc TicTacToe(TicTacToeRequest) returns (TicTacToeResponse) {}
 }
 
 message GreetingMessage {
@@ -24,4 +25,13 @@ message ElectionMessage {
 message ElectionResult {
   int32 leader_id = 1;
   bool success = 2;
+}
+
+message TicTacToeRequest {
+    string command = 1;
+}
+
+message TicTacToeResponse {
+    string response = 1;
+    repeated string board = 2;
 }
