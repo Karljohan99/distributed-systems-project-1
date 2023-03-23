@@ -10,6 +10,7 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
     def __init__(self):
         self.id = int(sys.argv[1])
         self.game = TicTacToe()
+        self.coordinator = False
         
         
     def GameRequest(self, request, context):
@@ -36,6 +37,7 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
         response = tictactoe_pb2.GreetingResponse(responder_id=self.id, message="Hello there!", success=True)
         return response
     
+    
     def StartElection(self, request, context):
         print(f"Received election message from process {request.prev_ids[-1]}")
         if self.id in request.prev_ids:
@@ -50,6 +52,14 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
                 request.prev_ids.append(id)
                 response = stub.StartElection(tictactoe_pb2.ElectionMessage(prev_ids=request.prev_ids))
                 return response
+            
+    
+    def EndElection(self, request, context):
+        if request.leader_id == self.id:
+            self.coordinator == True
+        else:
+            self.coordinator == False
+        return tictactoe_pb2.Empty()
     
         
         
@@ -59,17 +69,21 @@ def initiate_election(id):
         li = [id]
         response = stub.StartElection(tictactoe_pb2.ElectionMessage(prev_ids=li))
         if response.success:
+            for i in range(1, 3):
+                with grpc.insecure_channel(f'localhost:{i}') as channel:
+                    stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
+                    stub.EndElection(response)
             print(f"Election completed successfully. Coordinator ID is {response.leader_id}")
+            """
             if response.leader_id == id:
                 print("I am the coordinator")
             else:
                 print(f"{response.leader_id} is the coordinaor")
-                """
-                 with grpc.insecure_channel(f'localhost:{response.leader_id}') as channel:
+                with grpc.insecure_channel(f'localhost:{response.leader_id}') as channel:
                     stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
                     response = stub.StartElection(tictactoe_pb2.ElectionMessage(sender_ids=(request.sender_ids+1)%3))
                     return response
-                """
+            """
         else:
             print("Election failed")
             

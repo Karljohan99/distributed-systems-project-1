@@ -24,6 +24,11 @@ class TicTacToeStub(object):
                 request_serializer=tictactoe__pb2.ElectionMessage.SerializeToString,
                 response_deserializer=tictactoe__pb2.ElectionResult.FromString,
                 )
+        self.EndElection = channel.unary_unary(
+                '/TicTacToe/EndElection',
+                request_serializer=tictactoe__pb2.ElectionResult.SerializeToString,
+                response_deserializer=tictactoe__pb2.Empty.FromString,
+                )
         self.Game = channel.unary_unary(
                 '/TicTacToe/Game',
                 request_serializer=tictactoe__pb2.GameRequest.SerializeToString,
@@ -41,6 +46,12 @@ class TicTacToeServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def StartElection(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def EndElection(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -64,6 +75,11 @@ def add_TicTacToeServicer_to_server(servicer, server):
                     servicer.StartElection,
                     request_deserializer=tictactoe__pb2.ElectionMessage.FromString,
                     response_serializer=tictactoe__pb2.ElectionResult.SerializeToString,
+            ),
+            'EndElection': grpc.unary_unary_rpc_method_handler(
+                    servicer.EndElection,
+                    request_deserializer=tictactoe__pb2.ElectionResult.FromString,
+                    response_serializer=tictactoe__pb2.Empty.SerializeToString,
             ),
             'Game': grpc.unary_unary_rpc_method_handler(
                     servicer.Game,
@@ -111,6 +127,23 @@ class TicTacToe(object):
         return grpc.experimental.unary_unary(request, target, '/TicTacToe/StartElection',
             tictactoe__pb2.ElectionMessage.SerializeToString,
             tictactoe__pb2.ElectionResult.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def EndElection(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/TicTacToe/EndElection',
+            tictactoe__pb2.ElectionResult.SerializeToString,
+            tictactoe__pb2.Empty.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
