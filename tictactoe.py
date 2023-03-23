@@ -4,9 +4,7 @@ import random
 class TicTacToe:
 
     def __init__(self):
-        self.board = [["-", "-", "-"],
-                      ["-", "-", "-"],
-                      ["-", "-", "-"]]
+        self.board = [''] * 9
 
     def get_board(self):
         return self.board
@@ -15,7 +13,10 @@ class TicTacToe:
         return random.randint(0, 1)
 
     def make_move(self, slot, symbol):
-        self.board[slot//3][slot%3] = symbol
+        if self.board == '':
+            self.board[slot] = symbol
+            return True
+        return False
 
     def check_winner(self, mark):
         return ((self.board[0][0] == mark and self.board[0][1] == mark and self.board[0][2] == mark) or  # row 1
