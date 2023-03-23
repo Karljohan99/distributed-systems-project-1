@@ -8,6 +8,9 @@ class TicTacToe:
 
     def get_board(self):
         return self.board
+    
+    def set_board(self, board):
+        self.board = board
 
     def first_turn(self):
         return random.randint(0, 1)
