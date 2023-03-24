@@ -14,7 +14,7 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
         self.game = TicTacToe()
         self.coordinator = False
 
-    def GameRequest(self, request, context):
+    def ProcessCommand(self, request, context):
         cmd = request.command
         cmd = cmd.split()
         base_cmd = cmd[0].strip()
@@ -32,6 +32,13 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
             pass
         else:
             print("Unknown command")
+            
+    def GameRequest(self, next_move, board):
+        print(f"Its yout turn, current board\n{board}")
+        print(f"You are currently palying as {next_move}")
+        player_input = input("Please input your choice: ")
+        return tictactoe_pb2.GameResponse(command=player_input)
+        
         
     def SendGreeting(self, request, context):
         response = tictactoe_pb2.GreetingResponse(responder_id=self.id, message="Hello there!", success=True)
@@ -56,6 +63,15 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
     def EndElection(self, request, context):
         if request.leader_id == self.id:
             self.coordinator == True
+            while not self.game.check_winner():
+                for i in range(1,4):
+                    if i != self.id:
+                        with grpc.insecure_channel(f'localhost:{i}') as channel:
+                            stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
+                            response = stub.Game(tictactoe_pb2.GameRequest(next_move=self.game.next_move(), board=self.game.get_board()))
+                            processed = self.ProcessCommand(response)
+                            # TODO
+                            return response
         else:
             self.coordinator == False
         return tictactoe_pb2.Empty()

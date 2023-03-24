@@ -5,6 +5,15 @@ class TicTacToe:
 
     def __init__(self):
         self.board = [''] * 9
+        self.move = 'X'
+        
+        
+    def next_move(self):
+        if self.move == 'X':
+            self.move = 'O'
+        else:
+            self.move = 'X'
+        return self.move
 
     def get_board(self):
         return self.board

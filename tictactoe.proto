@@ -45,12 +45,12 @@ message Result {
 }
 
 message GameRequest {
-    string command = 1;
+    string next_move = 1;
+    repeated string board = 2;
 }
 
 message GameResponse {
-    string response = 1;
-    repeated string board = 2;
+    string command = 1;
 }
 
 message Empty {}
