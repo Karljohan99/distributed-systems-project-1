@@ -5,6 +5,7 @@ service TicTacToe {
   rpc StartElection(ElectionMessage) returns (ElectionResult) {}
   rpc GetDateTime(DateTimeRequest) returns (DateTimeResponse) {}
   rpc SetDateTime(DateTimeMessage) returns (Result) {}
+  rpc SetDateTimeCoordinator(DateTimeMessageCoordinator) returns (Result) {}
   rpc EndElection(ElectionResult) returns (Empty) {}
   rpc Game(GameRequest) returns (GameResponse) {}
 }
@@ -38,6 +39,11 @@ message DateTimeResponse {
 
 message DateTimeMessage {
   string adjustment = 1;
+}
+
+message DateTimeMessageCoordinator {
+  int32 node_ID = 1;
+  string adjustment = 2;
 }
 
 message Result {

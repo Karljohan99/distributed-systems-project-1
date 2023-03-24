@@ -30,7 +30,19 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
             stub.Game(tictactoe_pb2.GameRequest(next_move=None, board=game.get_board(), is_action=False))
             return True
         elif base_cmd == "Set-node-time":
-            # TODO
+            try:
+                set_node = int(cmd[1]).split('-')[1]
+                h, m, s = cmd[2].split(':')
+                time_adjustment = int(h) * 3600 + int(m) * 60 + int(s)
+                time_adjustment = datetime.timedelta(seconds=int(h) * 3600 + int(m) * 60 + int(s))
+            except:
+                print(f"[Command] - bad Set-node-time input. Format: Set-node-time Node-<ID> <hh-mm-ss>")
+            if set_node != self.id and self.coordinator:
+                stub.SetDateTimeCoordinator(tictactoe_pb2.DateTimeMessageCoordinator(node_ID=set_node, adjustment=time_adjustment))
+            elif set_node == self.id:
+                stub.SetDateTime(tictactoe_pb2.DateTimeMessage(adjustment=time_adjustment))
+            else:
+                print(f"[Command] - Only coordinator can change other node's internal clock.")
             pass
 
         return False
@@ -74,18 +86,21 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
 
     def EndElection(self, request, context):
         if request.leader_id == self.id:
-            self.coordinator == True
+            self.coordinator = True
             self.StartGame()
         else:
-            self.coordinator == False
+            self.coordinator = False
         return tictactoe_pb2.Empty()
 
     def StartGame(self):
-        p1, p2 = [1, 2, 3,].remove(self.id)
+        IDs = [1, 2, 3]
+        IDs.remove(self.id)
+        p1, p2 = IDs  # X and O
         self.games.append(TicTacToe(p1, p2, len(self.games)))
         for game in self.games:
             while not game.check_winner():
                 for i in range(1, 4):
+                    print(i)
                     if i != self.id:
                         processed = False
                         while not processed:
@@ -112,6 +127,12 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
         response = tictactoe_pb2.Result()
         response.success = True
         return response
+
+    def SetDateTimeCoordinator(self, request, context):
+        with grpc.insecure_channel(f'localhost:{request.node_ID}') as channel:
+            stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
+            response = stub.SetDateTime(
+                tictactoe_pb2.DateTimeMessage(adjustment=request.time_adjustment))
 
 
 def poll_times(id):
@@ -159,12 +180,14 @@ def initiate_election(id):
         response = stub.StartElection(
             tictactoe_pb2.ElectionMessage(prev_ids=li))
         if response.success:
-            for i in range(1, 3):
+            for i in range(1, 4):
                 with grpc.insecure_channel(f'localhost:{i}') as channel:
                     stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
+                    print("ending")
                     stub.EndElection(response)
             print(
                 f"[Election] - election completed successfully. Coordinator ID is {response.leader_id}")
+            print("[Game] - started")
             """
             if response.leader_id == id:
                 print("I am the coordinator")
@@ -207,6 +230,7 @@ def serve():
     try:
         while True:
             send_greeting(id)
+            # wait for game start
             time.sleep(86400)
     except KeyboardInterrupt:
         server.stop(0)
