@@ -7,6 +7,7 @@ service TicTacToe {
   rpc SetDateTime(DateTimeMessage) returns (Result) {}
   rpc EndElection(ElectionResult) returns (Empty) {}
   rpc Game(GameRequest) returns (GameResponse) {}
+  rpc Output(OutputRequest) returns (OutputResponse) {}
 }
 
 message GreetingMessage {
@@ -47,10 +48,15 @@ message Result {
 message GameRequest {
     string next_move = 1;
     repeated string board = 2;
+    bool is_action = 3;
 }
 
 message GameResponse {
     string command = 1;
+}
+
+message OutputRequest {
+
 }
 
 message Empty {}

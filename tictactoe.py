@@ -3,9 +3,12 @@ import random
 
 class TicTacToe:
 
-    def __init__(self):
+    def __init__(self, player1, player2, game_id):
         self.board = [''] * 9
         self.move = 'X'
+        self.player1 = player1
+        self.player2 = player2
+        self.game_id = game_id
         
         
     def next_move(self):
