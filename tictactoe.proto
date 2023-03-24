@@ -8,6 +8,7 @@ service TicTacToe {
   rpc SetDateTimeCoordinator(DateTimeMessageCoordinator) returns (Result) {}
   rpc EndElection(ElectionResult) returns (Empty) {}
   rpc Game(GameRequest) returns (GameResponse) {}
+  rpc GetLeader(LeaderRequest) returns (LeaderResponse) {}
 }
 
 message GreetingMessage {
@@ -53,6 +54,7 @@ message Result {
 message GameRequest {
     string next_move = 1;
     repeated string board = 2;
+    bool is_action = 3;
 }
 
 message GameResponse {
@@ -60,3 +62,11 @@ message GameResponse {
 }
 
 message Empty {}
+
+message LeaderRequest {
+  int32 sender_id = 1;
+}
+
+message LeaderResponse {
+  int32 leader_id = 1;
+}
