@@ -3,6 +3,8 @@ syntax = "proto3";
 service TicTacToe {
   rpc SendGreeting(GreetingMessage) returns (GreetingResponse) {}
   rpc StartElection(ElectionMessage) returns (ElectionResult) {}
+  rpc GetDateTime(DateTimeRequest) returns (DateTimeResponse) {}
+  rpc SetDateTime(DateTimeMessage) returns (Result) {}
 }
 
 message GreetingMessage {
@@ -24,4 +26,20 @@ message ElectionMessage {
 message ElectionResult {
   int32 leader_id = 1;
   bool success = 2;
+}
+
+message DateTimeRequest {
+  // No fields needed
+}
+
+message DateTimeResponse {
+  string date_time = 1;
+}
+
+message DateTimeMessage {
+  string adjustment = 1;
+}
+
+message Result {
+  bool success = 1;
 }
