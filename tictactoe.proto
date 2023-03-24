@@ -5,6 +5,8 @@ service TicTacToe {
   rpc StartElection(ElectionMessage) returns (ElectionResult) {}
   rpc GetDateTime(DateTimeRequest) returns (DateTimeResponse) {}
   rpc SetDateTime(DateTimeMessage) returns (Result) {}
+  rpc EndElection(ElectionResult) returns (Empty) {}
+  rpc Game(GameRequest) returns (GameResponse) {}
 }
 
 message GreetingMessage {
@@ -19,8 +21,7 @@ message GreetingResponse {
 }
 
 message ElectionMessage {
-  int32 sender_id = 1;
-  int32 election_id = 2;
+  repeated int32 prev_ids = 1;
 }
 
 message ElectionResult {
@@ -29,7 +30,6 @@ message ElectionResult {
 }
 
 message DateTimeRequest {
-  // No fields needed
 }
 
 message DateTimeResponse {
@@ -43,3 +43,14 @@ message DateTimeMessage {
 message Result {
   bool success = 1;
 }
+
+message GameRequest {
+    string command = 1;
+}
+
+message GameResponse {
+    string response = 1;
+    repeated string board = 2;
+}
+
+message Empty {}

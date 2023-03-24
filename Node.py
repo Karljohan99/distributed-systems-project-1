@@ -2,9 +2,8 @@ import grpc
 from concurrent import futures
 import time
 import sys
-import random
 import datetime
-
+from tictactoe import TicTacToe
 import tictactoe_pb2
 import tictactoe_pb2_grpc
 
@@ -12,25 +11,54 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
     def __init__(self):
         self.id = int(sys.argv[1])
         self.date_time = datetime.datetime.utcnow()
+        self.game = TicTacToe()
+        self.coordinator = False
+
+    def GameRequest(self, request, context):
+        cmd = request.command
+        cmd = cmd.split()
+        base_cmd = cmd[0].strip()
+        if base_cmd == "Set-Symbol":
+            move = cmd[1].split(',')
+            pos = move[0].strip()
+            player = move[1].strip()
+            if self.game.make_move(pos, player):
+                return tictactoe_pb2.GameResponse(response="OK", board=self.game.get_board())
+            else:
+                return tictactoe_pb2.GameResponse(response="FAIL")
+        elif base_cmd == "List-Board":
+            return tictactoe_pb2.GameResponse(response="OK", board=self.game.get_board())
+        elif base_cmd == "Set-node-time":
+            pass
+        else:
+            print("Unknown command")
         
     def SendGreeting(self, request, context):
         response = tictactoe_pb2.GreetingResponse(responder_id=self.id, message="Hello there!", success=True)
         return response
     
+    
     def StartElection(self, request, context):
-        print(f"Received election message from process {request.sender_id} with election ID {request.election_id}")
-        if request.sender_id == 3:
-            print("I am process 3 and I am initiating the election")
+        print(f"[Election] - received election message from process {request.prev_ids[-1]}")
+        if self.id in request.prev_ids:
             result = tictactoe_pb2.ElectionResult()
-            result.leader_id = 3
+            result.leader_id = max(request.prev_ids)
             result.success = True
             return result
         else:
-            print(f"Forwarding election message from process {request.sender_id} to process {request.sender_id+1}")
-            with grpc.insecure_channel(f'localhost:{request.sender_id+1}') as channel:
+            id = (request.prev_ids[-1]+1)%3
+            with grpc.insecure_channel(f'localhost:{id+1}') as channel:
                 stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
-                response = stub.StartElection(tictactoe_pb2.ElectionMessage(sender_id=request.sender_id+1, election_id=request.election_id))
+                request.prev_ids.append(id)
+                response = stub.StartElection(tictactoe_pb2.ElectionMessage(prev_ids=request.prev_ids))
                 return response
+
+    def EndElection(self, request, context):
+        if request.leader_id == self.id:
+            self.coordinator == True
+        else:
+            self.coordinator == False
+        return tictactoe_pb2.Empty()
 
     def GetDateTime(self, request, context):
         current_time = datetime.datetime.utcnow()
@@ -80,11 +108,26 @@ def time_sync(i):
 def initiate_election(id):
     with grpc.insecure_channel(f'localhost:{(id+1)%3}') as channel:
         stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
-        response = stub.StartElection(tictactoe_pb2.ElectionMessage(sender_id=id, election_id=1))
+        li = [id]
+        response = stub.StartElection(tictactoe_pb2.ElectionMessage(prev_ids=li))
         if response.success:
-            print(f"Election completed successfully. Coordinator ID is {response.leader_id}")
+            for i in range(1, 3):
+                with grpc.insecure_channel(f'localhost:{i}') as channel:
+                    stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
+                    stub.EndElection(response)
+            print(f"[Election] - election completed successfully. Coordinator ID is {response.leader_id}")
+            """
+            if response.leader_id == id:
+                print("I am the coordinator")
+            else:
+                print(f"{response.leader_id} is the coordinaor")
+                with grpc.insecure_channel(f'localhost:{response.leader_id}') as channel:
+                    stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
+                    response = stub.StartElection(tictactoe_pb2.ElectionMessage(sender_ids=(request.sender_ids+1)%3))
+                    return response
+            """
         else:
-            print("Election failed")
+            print("[Election] - failed")
             
             
 def send_greeting(id):
@@ -99,8 +142,8 @@ def send_greeting(id):
                 responses += 1
                 
     if responses == 2:
+        time_sync(id)
         initiate_election(id)
-        #time_sync(id)
             
 
 def serve():
