@@ -23,6 +23,9 @@ class TicTacToe:
 
     def set_board(self, board):
         self.board = board
+        
+    def get_players(self):
+        return (self.player1, self.player2)
 
     def first_turn(self):
         return random.randint(0, 1)
