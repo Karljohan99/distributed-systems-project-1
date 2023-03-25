@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 service TicTacToe {
-  rpc SendGreeting(GreetingMessage) returns (GreetingResponse) {}
+  rpc Ping(Empty) returns (Empty) {}
   rpc StartElection(ElectionMessage) returns (ElectionResult) {}
   rpc GetDateTime(DateTimeRequest) returns (DateTimeResponse) {}
   rpc SetDateTime(DateTimeMessage) returns (Result) {}
@@ -10,17 +10,6 @@ service TicTacToe {
   rpc Player(GameRequest) returns (Empty) {}
   rpc Coordinator(CoordinatorRequest) returns (CoordinatorResponse) {}
   rpc GetLeader(LeaderRequest) returns (LeaderResponse) {}
-}
-
-message GreetingMessage {
-  int32 sender_id = 1;
-  string message = 2;
-}
-
-message GreetingResponse {
-  int32 responder_id = 1;
-  string message = 2;
-  bool success = 3;
 }
 
 message ElectionMessage {

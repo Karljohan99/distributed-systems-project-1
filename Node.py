@@ -92,13 +92,9 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
         is_action = request.is_action
         return tictactoe_pb2.Empty()
     
+    
     def Ping(self, request, context):
         return tictactoe_pb2.Empty()
-
-    def SendGreeting(self, request, context):
-        response = tictactoe_pb2.GreetingResponse(
-            responder_id=self.id, message="Hello there!", success=True)
-        return response
 
 
     def StartElection(self, request, context):
@@ -107,16 +103,23 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
         if self.id in request.prev_ids:
             result = tictactoe_pb2.ElectionResult()
             result.leader_id = max(request.prev_ids)
+            print(f"Node {self.id}: {request.prev_ids}, {result.leader_id}")
             result.success = True
             return result
         else:
-            id = (request.prev_ids[-1]+1) % 3
-            with grpc.insecure_channel(f'localhost:{id+1}') as channel:
-                stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
-                request.prev_ids.append(id)
-                response = stub.StartElection(
-                    tictactoe_pb2.ElectionMessage(prev_ids=request.prev_ids))
-                return response
+            id = request.prev_ids[-1] % 9 + 1
+            request.prev_ids.append(id)
+            next_node = id % 9 + 1
+            while True:
+                with grpc.insecure_channel(f'localhost:{next_node}') as channel:
+                    stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
+                    try:
+                        response = stub.StartElection(
+                            tictactoe_pb2.ElectionMessage(prev_ids=request.prev_ids))
+                        return response
+                    except:
+                        next_node = next_node % 9 + 1
+                
 
 
     def EndElection(self, request, context):
@@ -211,7 +214,7 @@ def time_sync(i):
 
 
 def initiate_election(id):
-    with grpc.insecure_channel(f'localhost:{(id+1)%3}') as channel:
+    with grpc.insecure_channel(f'localhost:{id%9+1}') as channel:
         stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
         li = [id]
         response = stub.StartElection(
@@ -223,16 +226,6 @@ def initiate_election(id):
                     stub.EndElection(response)
             print(
                 f"[Election] - election completed successfully. Coordinator ID is {response.leader_id}")
-            """
-            if response.leader_id == id:
-                print("I am the coordinator")
-            else:
-                print(f"{response.leader_id} is the coordinaor")
-                with grpc.insecure_channel(f'localhost:{response.leader_id}') as channel:
-                    stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
-                    response = stub.StartElection(tictactoe_pb2.ElectionMessage(sender_ids=(request.sender_ids+1)%3))
-                    return response
-            """
         else:
             print("[Election] - failed")
 
@@ -294,19 +287,26 @@ def serve():
     server.start()
     print(f"Server started listening on port {id}")
     try:
-        try_election(id)
+        while get_leader(id) == 0:
+            player_input = input(f"Node-{id}> ")
+            if player_input == "Start-game" and try_election(id):
+                break
             
         # wait for game start
-        print("Waiting for leader", end="")
-        while True:
-            print(".", end="")
-            leader = get_leader(id)
-            if leader != 0:
-                leader_id = leader
-                break
-            time.sleep(1)
-        print(f"\nLeader selected: {leader_id}")
-        print(f"Starting game...")
+        leader = get_leader(id)
+        if leader == 0:
+            print("Waiting for leader", end="")
+            while True:
+                print(".", end="")
+                leader = get_leader(id)
+                if leader != 0:
+                    leader_id = leader
+                    break
+                time.sleep(1)
+            print(f"\nLeader selected: {leader_id}")
+            print(f"Starting game...")
+        else:
+            leader_id = leader
 
         while True:
             player_input = input(f"Node-{id}> ")
