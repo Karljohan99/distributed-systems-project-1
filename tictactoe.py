@@ -17,6 +17,9 @@ class TicTacToe:
         else:
             self.move = 'X'
         return self.move
+    
+    def get_move(self):
+        return self.move
 
     def get_board(self):
         return self.board
@@ -26,6 +29,9 @@ class TicTacToe:
         
     def get_players(self):
         return (self.player1, self.player2)
+    
+    def get_game_id(self):
+        return self.game_id
 
     def first_turn(self):
         return random.randint(0, 1)

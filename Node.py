@@ -8,6 +8,8 @@ from tictactoe import TicTacToe
 import tictactoe_pb2
 import tictactoe_pb2_grpc
 
+MAX_NODES = 3
+
 class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
     def __init__(self, id):
         #self.id = int(sys.argv[1])
@@ -17,6 +19,7 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
         self.coordinator = False
         self.leader_ID = 0
         self.game_ID = None
+        self.moves = ["X", "O"]
 
     def ProcessCommand(self, request, stub, game):
         cmd = request.command
@@ -26,11 +29,17 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
         base_cmd = cmd[0].strip()
         match base_cmd:
             case "Set-symbol":
+                players = game.get_players()
+                player_index = players.index(request.player_id)
+                if self.moves.index(game.get_move()) != player_index:
+                    return (False, f"It's not your turn!")
+                
                 move = cmd[1].split(',')
                 pos = int(move[0].strip())
                 player = move[1].strip()
                 move_made = game.make_move(pos, player)
                 if move_made:
+                    game.next_move()
                     return (True, f"Move done! Current board: {game.get_board()}")
             case "List-board":
                 return (False, f"Current board: {game.get_board()}")
@@ -69,27 +78,36 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
             print(win_msg)
             return tictactoe_pb2.CoordinatorResponse(msg=f"{msg} {win_msg}")
         
-        if self.coordinator:
+        if self.id == request.player_id:
             return tictactoe_pb2.CoordinatorResponse(msg=msg)
-            
+        
         players = game.get_players()
-        other_player = players[players.index(request.player_id)-1]
+        player_index = players.index(request.player_id)
+        other_player = players[1-player_index]
         if move_made:
             with grpc.insecure_channel(f'localhost:{other_player}') as channel:
                 stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
-                response = stub.Player(tictactoe_pb2.GameRequest(
-                    next_move=game.next_move(),
+                stub.Player(tictactoe_pb2.PlayerMessage(
+                    next_move=game.get_move(),
+                    player_symbol = self.moves[1-player_index],
                     board=game.get_board(),
-                    is_action=True,
-                    game_id=request.game_id))
+                    start=False,
+                    game_id=request.game_id,
+                    opponent=players[1-player_index]))
         return tictactoe_pb2.CoordinatorResponse(msg=msg)
 
 
     def Player(self, request, context):
-        self.game_ID = request.game_id
-        next_move = request.next_move
-        board = request.board
-        is_action = request.is_action
+        if request.start:
+            self.game_ID = request.game_id
+            print(f"\rGame has started! You are playing against Node {request.opponent}.")
+            if request.next_move == request.player_symbol:
+                print(f"It's your turn! Your symbol is {request.player_symbol}\nCurrent board: {request.board}")
+            else:
+                print(f"It's your opponent's turn. Your symbol is {request.player_symbol}.")
+        else:
+            print(f"\rIt's your turn! Your symbol is {request.player_symbol}\nCurrent board: {request.board}")
+        #print(f"Node-{self.id}> ", end='')
         return tictactoe_pb2.Empty()
     
     
@@ -103,13 +121,12 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
         if self.id in request.prev_ids:
             result = tictactoe_pb2.ElectionResult()
             result.leader_id = max(request.prev_ids)
-            print(f"Node {self.id}: {request.prev_ids}, {result.leader_id}")
             result.success = True
             return result
         else:
-            id = request.prev_ids[-1] % 9 + 1
+            id = self.id
             request.prev_ids.append(id)
-            next_node = id % 9 + 1
+            next_node = id % MAX_NODES + 1
             while True:
                 with grpc.insecure_channel(f'localhost:{next_node}') as channel:
                     stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
@@ -118,7 +135,7 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
                             tictactoe_pb2.ElectionMessage(prev_ids=request.prev_ids))
                         return response
                     except:
-                        next_node = next_node % 9 + 1
+                        next_node = next_node % MAX_NODES + 1
                 
 
 
@@ -129,19 +146,50 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
         else:
             self.coordinator = False
         self.leader_ID = request.leader_id
+        print(f"[Election] - election completed successfully. Coordinator ID is {request.leader_id}")
         return tictactoe_pb2.Empty()
 
 
     def StartGame(self):
-        IDs = [1, 2, 3]
-        IDs.remove(self.id)
-        p1, p2 = IDs  # X and O
-        self.games.append(TicTacToe(p1, p2, len(self.games)))
+        IDs = []
+        for i in range(1, MAX_NODES):
+            if i == self.id:
+                continue
+            with grpc.insecure_channel(f'localhost:{i}') as channel:
+                stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
+                try:
+                    stub.Ping(tictactoe_pb2.Empty())
+                    IDs.append(i)
+                except:
+                    pass
+
+        prev_i = 0
+        for i in range(2, len(IDs)+1, 2):
+            p1, p2 = IDs[prev_i:i] # X and O
+            self.games.append(TicTacToe(p1, p2, len(self.games)))
+            prev_i = i
+  
         for game in self.games:
+            p1, p2 = game.get_players()
             with grpc.insecure_channel(f'localhost:{p1}') as channel:
                 stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
-                stub.Player(tictactoe_pb2.GameRequest(
-                    next_move=game.next_move(), board=game.get_board(), is_action=True, game_id=0))
+                stub.Player(tictactoe_pb2.PlayerMessage(
+                    next_move=game.get_move(), 
+                    player_symbol="X",
+                    board=game.get_board(), 
+                    start=True, 
+                    game_id=game.get_game_id(),
+                    opponent=p2))
+                
+            with grpc.insecure_channel(f'localhost:{p2}') as channel:
+                stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
+                stub.Player(tictactoe_pb2.PlayerMessage(
+                    next_move=game.get_move(), 
+                    player_symbol="O", 
+                    board=game.get_board(), 
+                    start=True, 
+                    game_id=game.get_game_id(),
+                    opponent=p1))
 
 
     def GetDateTime(self, request, context):
@@ -214,7 +262,7 @@ def time_sync(i):
 
 
 def initiate_election(id):
-    with grpc.insecure_channel(f'localhost:{id%9+1}') as channel:
+    with grpc.insecure_channel(f'localhost:{id%MAX_NODES+1}') as channel:
         stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
         li = [id]
         response = stub.StartElection(
@@ -224,15 +272,14 @@ def initiate_election(id):
                 with grpc.insecure_channel(f'localhost:{i}') as channel:
                     stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
                     stub.EndElection(response)
-            print(
-                f"[Election] - election completed successfully. Coordinator ID is {response.leader_id}")
+            #print(f"[Election] - election completed successfully. Coordinator ID is {response.leader_id}")
         else:
             print("[Election] - failed")
 
 
 def try_election(id):
     responses = 0
-    for i in range(1, 10):
+    for i in range(1, MAX_NODES+1):
         if i == id:
             continue
         with grpc.insecure_channel(f'localhost:{i}') as channel:
@@ -260,11 +307,11 @@ def get_leader(id):
     
 def check_command_correctness(command):
     return (command == "List-board" or 
-            bool(re.fullmatch("Set-symbol \d,(O|X)", command)) or 
+            bool(re.fullmatch("Set-symbol [0-8],(O|X)", command)) or 
             bool(re.fullmatch("Set-node-time Node-\d+ \d\d:\d\d:\d\d", command)))
     
 def get_id():
-    for i in range(1, 10):
+    for i in range(1, MAX_NODES+1):
         with grpc.insecure_channel(f'localhost:{i}') as channel:
             stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
             try:
