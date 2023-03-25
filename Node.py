@@ -9,8 +9,9 @@ import tictactoe_pb2
 import tictactoe_pb2_grpc
 
 class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
-    def __init__(self):
-        self.id = int(sys.argv[1])
+    def __init__(self, id):
+        #self.id = int(sys.argv[1])
+        self.id = id
         self.date_time = datetime.datetime.utcnow()
         self.games = []
         self.coordinator = False
@@ -90,6 +91,9 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
         board = request.board
         is_action = request.is_action
         return tictactoe_pb2.Empty()
+    
+    def Ping(self, request, context):
+        return tictactoe_pb2.Empty()
 
     def SendGreeting(self, request, context):
         response = tictactoe_pb2.GreetingResponse(
@@ -135,30 +139,6 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
                 stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
                 stub.Player(tictactoe_pb2.GameRequest(
                     next_move=game.next_move(), board=game.get_board(), is_action=True, game_id=0))
-        """
-        for game in self.games:
-            while not (game.check_winner("X") or game.check_winner("O")):
-                if game.check_winner("X"):
-                    print("X won!")
-                    break
-                elif game.check_winner("O"):
-                    print("O won!")
-                    break
-                
-                for i in range(1, 4):
-                    if i == self.id:
-                        continue
-                    
-                    processed = False
-                    while not processed:
-                        with grpc.insecure_channel(f'localhost:{i}') as channel:
-                            stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
-                            response = stub.Player(tictactoe_pb2.GameRequest(
-                                next_move=game.next_move(), board=game.get_board(), is_action=True, game_id=0))
-                            processed = self.ProcessCommand(response, stub, game)
-            print("Game done.")
-            """
-
 
 
     def GetDateTime(self, request, context):
@@ -191,13 +171,6 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
         response.leader_id = self.leader_ID
         return response
 
-    """
-    def Gamereq(self, request, context):
-        print(request)
-        response = tictactoe_pb2.GameResponse()
-        response.message
-        return 
-    """
 
 def poll_times(id):
     responses = dict()
@@ -264,21 +237,25 @@ def initiate_election(id):
             print("[Election] - failed")
 
 
-def send_greeting(id):
+def try_election(id):
     responses = 0
-    for i in range(1, 3):
+    for i in range(1, 10):
         if i == id:
             continue
         with grpc.insecure_channel(f'localhost:{i}') as channel:
             stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
-            response = stub.SendGreeting(
-                tictactoe_pb2.GreetingMessage(sender_id=id, message="Hi!"))
-            if response.success:
+            try:
+                stub.Ping(tictactoe_pb2.Empty())
                 responses += 1
+            except:
+                pass
 
-    if responses == 2:
+    if responses >= 2:
         time_sync(id)
         initiate_election(id)
+        return True
+    else:
+        return False
 
 
 def get_leader(id):
@@ -292,20 +269,34 @@ def check_command_correctness(command):
     return (command == "List-board" or 
             bool(re.fullmatch("Set-symbol \d,(O|X)", command)) or 
             bool(re.fullmatch("Set-node-time Node-\d+ \d\d:\d\d:\d\d", command)))
+    
+def get_id():
+    for i in range(1, 10):
+        with grpc.insecure_channel(f'localhost:{i}') as channel:
+            stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
+            try:
+                stub.Ping(tictactoe_pb2.Empty())
+            except:
+                return i
+    return None
+    
 
 def serve():
     leader_id = None
-    id = int(sys.argv[1])
+    id = get_id()
+    if id is None:
+        print("No room available!")
+        return
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     tictactoe_pb2_grpc.add_TicTacToeServicer_to_server(
-        TicTacToeServicer(), server)
+        TicTacToeServicer(id), server)
     server.add_insecure_port(f'localhost:{id}')
     server.start()
-    print("Server started listening on DESIGNATED port")
+    print(f"Server started listening on port {id}")
     try:
-        send_greeting(id)
+        try_election(id)
+            
         # wait for game start
-        
         print("Waiting for leader", end="")
         while True:
             print(".", end="")
