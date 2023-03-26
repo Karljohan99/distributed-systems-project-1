@@ -69,12 +69,12 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
 
         move_made, msg = self.ProcessCommand(request, None, game)
         
-        if game.check_winner("X"):
-            win_msg = "X won!"
-            print(win_msg)
-            return tictactoe_pb2.CoordinatorResponse(msg=f"{msg} {win_msg}")
-        elif game.check_winner("O"):
-            win_msg = "O won!"
+        winner = game.check_winner_new()
+        if winner is not None:
+            if winner == "draw":
+                win_msg = 'Nobody won, draw!'
+            else:
+                win_msg = f'{winner} won!'
             print(win_msg)
             return tictactoe_pb2.CoordinatorResponse(msg=f"{msg} {win_msg}")
         

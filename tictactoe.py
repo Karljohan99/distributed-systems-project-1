@@ -61,3 +61,18 @@ class TicTacToe:
                 (self.board[3] == mark and self.board[5] == mark and self.board[8] == mark) or  # for colm 3
                 (self.board[0] == mark and self.board[4] == mark and self.board[8] == mark) or  # diag 1
                 (self.board[2] == mark and self.board[4] == mark and self.board[6] == mark))  # diag 2
+
+
+    def check_winner_new(self):
+        for i in range(3):
+            if self.board[i*3] == self.board[i*3+1] == self.board[i*3+2] and self.board[i*3] != "":
+                return self.board[i*3]
+            if self.board[i] == self.board[i+3] == self.board[i+6] and self.board[i] != "":
+                return self.board[i]
+        if self.board[0] == self.board[4] == self.board[8] and self.board[0] != "":
+            return self.board[0]
+        if self.board[2] == self.board[4] == self.board[6] and self.board[2] != "":
+            return self.board[2]
+        if "" not in self.board:
+            return "draw"
+        return None
