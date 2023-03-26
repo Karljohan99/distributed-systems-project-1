@@ -46,17 +46,21 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
             case "List-board":
                 return (False, f"Current board: {game.get_board()}")
             case "Set-node-time":
-                try:
-                    set_node = int(cmd[1]).split('-')[1]
-                    h, m, s = cmd[2].split(':')
-                    time_adjustment = int(h) * 3600 + int(m) * 60 + int(s)
-                    time_adjustment = datetime.timedelta(seconds=int(h) * 3600 + int(m) * 60 + int(s))
-                except:
-                    print(f"[Command] - Bad Set-node-time input. Format: Set-node-time Node-<ID> <hh-mm-ss>")
-                if set_node != self.id and self.coordinator:
-                    stub.SetDateTimeCoordinator(tictactoe_pb2.DateTimeMessageCoordinator(node_ID=set_node, adjustment=time_adjustment))
-                elif set_node == self.id:
-                    stub.SetDateTime(tictactoe_pb2.DateTimeMessage(adjustment=time_adjustment))
+                set_node = int(cmd[1].split('-')[1])
+                h, m, s = cmd[2].split(':')
+                #time_adjustment = str(int(h) * 3600 + int(m) * 60 + int(s))
+                new_time = str(datetime.date.today()) + "-" + str(cmd[2])
+                if set_node != request.player_id and request.player_id == self.leader_ID:
+                    with grpc.insecure_channel(f'localhost:{request.player_id}') as channel:
+                        stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
+                        stub.SetDateTimeCoordinator(
+                            tictactoe_pb2.DateTimeMessageCoordinator(node_ID=set_node, adjustment="", time=new_time))
+                        return (False, "Time adjusted.")
+                elif set_node == request.player_id:
+                    with grpc.insecure_channel(f'localhost:{request.player_id}') as channel:
+                        stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
+                        stub.SetDateTime(tictactoe_pb2.DateTimeMessage(adjustment="", time=new_time))
+                        return (False, "Time adjusted.")
                 else:
                     print(f"[Command] - Only coordinator can change other node's internal clock.")
                 pass
@@ -64,7 +68,7 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
             #print("[Command] - Unknown command")
 
         return (False, "[Command] - Unknown command")
-    
+
     
     def Coordinator(self, request, context):
         game = self.games[request.game_id]
@@ -77,7 +81,6 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
                 win_msg = 'Nobody won, draw!'
             else:
                 win_msg = f'{winner} won!'
-            print(win_msg)
             return tictactoe_pb2.CoordinatorResponse(msg=f"{msg} {win_msg}")
         
         if self.id == request.player_id:
@@ -195,7 +198,7 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
 
 
     def GetDateTime(self, request, context):
-        current_time = datetime.datetime.utcnow()
+        current_time = self.date_time
         response = tictactoe_pb2.DateTimeResponse()
         response.date_time = current_time.strftime(
             "%Y-%m-%d %H:%M:%S.%f")[:-3] + "Z"
@@ -203,20 +206,27 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
 
 
     def SetDateTime(self, request, context):
-        print(f"[Time sync] - old: {self.date_time}")
-        print(f"[Time sync] - adjustment: {request.adjustment}")
-        self.date_time += datetime.timedelta(seconds=float(request.adjustment))
-        print(f"[Time sync] - new: {self.date_time}")
+        if request.adjustment:
+            print(f"[Time sync] - old: {self.date_time}")
+            print(f"[Time sync] - adjustment: {request.adjustment}")
+            self.date_time += datetime.timedelta(seconds=float(request.adjustment))
+            print(f"[Time sync] - new: {self.date_time}")
+        else:
+            print(f"[Time sync] - old: {self.date_time}")
+            self.date_time = datetime.datetime.strptime(request.time, "%Y-%m-%d-%H:%M:%S")
+            print(f"[Time sync] - new: {self.date_time}")
         response = tictactoe_pb2.Result()
         response.success = True
         return response
 
-
     def SetDateTimeCoordinator(self, request, context):
+        message = tictactoe_pb2.DateTimeMessage(adjustment="", time=request.time)
         with grpc.insecure_channel(f'localhost:{request.node_ID}') as channel:
             stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
-            response = stub.SetDateTime(
-                tictactoe_pb2.DateTimeMessage(adjustment=request.time_adjustment))
+            stub.SetDateTime(message)
+            response = tictactoe_pb2.Result()
+            response.success = True
+            return response
 
 
     def GetLeader(self, request, context):
@@ -245,7 +255,7 @@ def send_time_adjustments(id, adjustments):
         with grpc.insecure_channel(f'localhost:{i}') as channel:
             stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
             response = stub.SetDateTime(
-                tictactoe_pb2.DateTimeMessage(adjustment=adjustments[i]))
+                tictactoe_pb2.DateTimeMessage(adjustment=adjustments[i], time=""))
 
 # Berkeley algorithm
 
@@ -255,6 +265,8 @@ def time_sync(i):
     responded_times = poll_times(i)
     average_time = datetime.datetime.fromtimestamp(sum(map(datetime.datetime.timestamp, responded_times.values(
     ))) / len(responded_times.values()))  # https://stackoverflow.com/a/39757012
+    print(responded_times[1], responded_times[2], responded_times[3])
+    print(average_time)
     adjustments = dict()
     for key in responded_times.keys():
         adjustments[key] = str(

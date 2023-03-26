@@ -30,11 +30,13 @@ message DateTimeResponse {
 
 message DateTimeMessage {
   string adjustment = 1;
+  string time = 2;
 }
 
 message DateTimeMessageCoordinator {
   int32 node_ID = 1;
   string adjustment = 2;
+  string time = 3;
 }
 
 message Result {
