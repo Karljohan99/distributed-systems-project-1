@@ -39,6 +39,7 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
                 if game.get_move() != player:
                     return (False, f"Not your symbol!")
                 move_made = game.make_move(pos, player)
+                time_sync(self.id)
                 if move_made:
                     game.next_move()
                     return (True, f"Move done! Current board: {game.get_board()}")
