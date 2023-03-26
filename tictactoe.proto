@@ -10,6 +10,7 @@ service TicTacToe {
   rpc Player(PlayerMessage) returns (Empty) {}
   rpc Coordinator(CoordinatorRequest) returns (CoordinatorResponse) {}
   rpc GetLeader(LeaderRequest) returns (LeaderResponse) {}
+  rpc Input(GetInput) returns (ResponseInput) {}
 }
 
 message ElectionMessage {
@@ -69,4 +70,12 @@ message LeaderRequest {
 
 message LeaderResponse {
   int32 leader_id = 1;
+}
+
+message GetInput {
+    int32 id = 1;
+}
+
+message ResponseInput {
+    string command = 1;
 }

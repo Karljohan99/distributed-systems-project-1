@@ -20,9 +20,10 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
         self.leader_ID = 0
         self.game_ID = None
         self.moves = ["X", "O"]
+        self.timeout = 60
 
-    def ProcessCommand(self, request, stub, game):
-        cmd = request.command
+    def ProcessCommand(self, request, stub, game, command):
+        cmd = command
         if not check_command_correctness(cmd):
             return (False, "[Command] - Unknown command")
         cmd = cmd.split(" ")
@@ -65,11 +66,27 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
 
         return (False, "[Command] - Unknown command")
     
+    def Input(self, request, context):
+        player_input = input(f"Node-{request.id}> ")
+        return tictactoe_pb2.ResponseInput(command=player_input)
+    
     
     def Coordinator(self, request, context):
+        
         game = self.games[request.game_id]
+        
+        players = game.get_players()
+        player_index = players.index(request.player_id)
+        if self.moves.index(game.get_move()) == player_index:
+            with grpc.insecure_channel(f'localhost:{request.player_id}') as channel:
+                stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
+                command = stub.Input(tictactoe_pb2.GetInput(id=request.player_id), timeout=self.timeout)
+        else:
+            with grpc.insecure_channel(f'localhost:{request.player_id}') as channel:
+                stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
+                command = stub.Input(tictactoe_pb2.GetInput(id=request.player_id))
 
-        move_made, msg = self.ProcessCommand(request, None, game)
+        move_made, msg = self.ProcessCommand(request, None, game, command)
         
         winner = game.check_winner_new()
         if winner is not None:
@@ -358,11 +375,15 @@ def serve():
             leader_id = leader
 
         while True:
-            player_input = input(f"Node-{id}> ")
-            with grpc.insecure_channel(f'localhost:{leader_id}') as channel:
-                stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
-                response = stub.Coordinator(tictactoe_pb2.CoordinatorRequest(command=player_input, game_id=0, player_id=id))
-                print(f"{response.msg}")
+            # player_input = input(f"Node-{id}> ")
+            try:
+                player_input = ''
+                with grpc.insecure_channel(f'localhost:{leader_id}') as channel:
+                    stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
+                    response = stub.Coordinator(tictactoe_pb2.CoordinatorRequest(command=player_input, game_id=0, player_id=id))
+                    print(f"{response.msg}")
+            except grpc.RpcError:
+                print("Timeout")
     except KeyboardInterrupt:
         server.stop(0)
 
