@@ -33,10 +33,11 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
                 player_index = players.index(request.player_id)
                 if self.moves.index(game.get_move()) != player_index:
                     return (False, f"It's not your turn!")
-                
                 move = cmd[1].split(',')
                 pos = int(move[0].strip())
                 player = move[1].strip()
+                if game.get_move() != player:
+                    return (False, f"Not your symbol!")
                 move_made = game.make_move(pos, player)
                 if move_made:
                     game.next_move()
