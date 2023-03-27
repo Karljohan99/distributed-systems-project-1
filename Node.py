@@ -349,7 +349,7 @@ def serve():
     print(f"Server started listening on port 50051")
     try:
         while get_leader(id) == 0:
-            player_input = input(f"Node-50051> ")
+            player_input = input(f"Node-{id}> ")
             if player_input == "Start-game" and try_election(id):
                 break
             
@@ -370,7 +370,7 @@ def serve():
             leader_id = leader
 
         while True:
-            player_input = input(f"Node-50051> ")
+            player_input = input(f"Node-{id}> ")
             with grpc.insecure_channel(f'192.168.76.5{leader_id}:50051') as channel:
                 stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
                 response = stub.Coordinator(tictactoe_pb2.CoordinatorRequest(command=player_input, game_id=0, player_id=id))
