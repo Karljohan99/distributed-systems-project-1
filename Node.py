@@ -332,7 +332,6 @@ def try_election(id):
             except:
                 pass
 
-    print("Res", responses)
     if responses >= 2:
         time_sync(id)
         initiate_election(id)
@@ -388,8 +387,15 @@ def serve():
         try:
             while get_leader(id) == 0:
                 player_input = input(f"Node-{id}> ")
-                if player_input == "Start-game" and try_election(id):
-                    break
+                if player_input == "":
+                    continue
+                if player_input == "Start-game":
+                    if try_election(id):
+                        break
+                    else:
+                        print("Not enough Nodes have joined!")
+                else:
+                    print("Game hasn't started yet!")
                 
             # wait for game start
             leader = get_leader(id)
@@ -409,6 +415,8 @@ def serve():
 
             while True:
                 player_input = input(f"Node-{id}> ")
+                if player_input == "":
+                    continue
                 game_id = get_game_id(id)
                 if game_id == -1:
                     break
