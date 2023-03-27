@@ -51,13 +51,13 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
                 #time_adjustment = str(int(h) * 3600 + int(m) * 60 + int(s))
                 new_time = str(datetime.date.today()) + "-" + str(cmd[2])
                 if set_node != request.player_id and request.player_id == self.leader_ID:
-                    with grpc.insecure_channel(f'192.168.76.5{id}:{request.player_id}') as channel:
+                    with grpc.insecure_channel(f'192.168.76.5{request.player_id}:50051') as channel:
                         stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
                         stub.SetDateTimeCoordinator(
                             tictactoe_pb2.DateTimeMessageCoordinator(node_ID=set_node, adjustment="", time=new_time))
                         return (False, "Time adjusted.")
                 elif set_node == request.player_id:
-                    with grpc.insecure_channel(f'192.168.76.5{id}:{request.player_id}') as channel:
+                    with grpc.insecure_channel(f'192.168.76.5{request.player_id}:50051') as channel:
                         stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
                         stub.SetDateTime(tictactoe_pb2.DateTimeMessage(adjustment="", time=new_time))
                         return (False, "Time adjusted.")
@@ -90,7 +90,7 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
         player_index = players.index(request.player_id)
         other_player = players[1-player_index]
         if move_made:
-            with grpc.insecure_channel(f'192.168.76.5{id}:{other_player}') as channel:
+            with grpc.insecure_channel(f'192.168.76.5{other_player}:50051') as channel:
                 stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
                 stub.Player(tictactoe_pb2.PlayerMessage(
                     next_move=game.get_move(),
@@ -133,7 +133,7 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
             request.prev_ids.append(id)
             next_node = id % MAX_NODES + 1
             while True:
-                with grpc.insecure_channel(f'192.168.76.5{id}:{next_node}') as channel:
+                with grpc.insecure_channel(f'192.168.76.5{next_node}:50051') as channel:
                     stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
                     try:
                         response = stub.StartElection(
@@ -160,7 +160,7 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
         for i in range(1, MAX_NODES):
             if i == self.id:
                 continue
-            with grpc.insecure_channel(f'192.168.76.5{id}:{i}') as channel:
+            with grpc.insecure_channel(f'192.168.76.5{i}:50051') as channel:
                 stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
                 try:
                     stub.Ping(tictactoe_pb2.Empty())
@@ -176,7 +176,7 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
   
         for game in self.games:
             p1, p2 = game.get_players()
-            with grpc.insecure_channel(f'192.168.76.5{id}:{p1}') as channel:
+            with grpc.insecure_channel(f'192.168.76.5{p1}:50051') as channel:
                 stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
                 stub.Player(tictactoe_pb2.PlayerMessage(
                     next_move=game.get_move(), 
@@ -186,7 +186,7 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
                     game_id=game.get_game_id(),
                     opponent=p2))
                 
-            with grpc.insecure_channel(f'192.168.76.5{id}:{p2}') as channel:
+            with grpc.insecure_channel(f'192.168.76.5{p2}:50051') as channel:
                 stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
                 stub.Player(tictactoe_pb2.PlayerMessage(
                     next_move=game.get_move(), 
@@ -221,7 +221,7 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
 
     def SetDateTimeCoordinator(self, request, context):
         message = tictactoe_pb2.DateTimeMessage(adjustment="", time=request.time)
-        with grpc.insecure_channel(f'192.168.76.5{id}:{request.node_ID}') as channel:
+        with grpc.insecure_channel(f'192.168.76.5{request.node_ID}:50051') as channel:
             stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
             stub.SetDateTime(message)
             response = tictactoe_pb2.Result()
@@ -238,7 +238,7 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
 def poll_times(id):
     responses = dict()
     for i in range(1, 4):
-        with grpc.insecure_channel(f'192.168.76.5{id}:{i}') as channel:
+        with grpc.insecure_channel(f'192.168.76.5{i}:50051') as channel:
             stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
             start_time = time.time()
             response = stub.GetDateTime(tictactoe_pb2.DateTimeRequest())
@@ -252,7 +252,7 @@ def poll_times(id):
 
 def send_time_adjustments(id, adjustments):
     for i in range(1, 4):
-        with grpc.insecure_channel(f'192.168.76.5{id}:{i}') as channel:
+        with grpc.insecure_channel(f'192.168.76.5{i}:50051') as channel:
             stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
             response = stub.SetDateTime(
                 tictactoe_pb2.DateTimeMessage(adjustment=adjustments[i], time=""))
@@ -276,14 +276,14 @@ def time_sync(i):
 
 
 def initiate_election(id):
-    with grpc.insecure_channel(f'192.168.76.5{id}:{id%MAX_NODES+1}') as channel:
+    with grpc.insecure_channel(f'192.168.76.5{id%MAX_NODES+1}:50051') as channel:
         stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
         li = [id]
         response = stub.StartElection(
             tictactoe_pb2.ElectionMessage(prev_ids=li))
         if response.success:
             for i in range(1, 4):
-                with grpc.insecure_channel(f'192.168.76.5{id}:{i}') as channel:
+                with grpc.insecure_channel(f'192.168.76.5{i}:50051') as channel:
                     stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
                     stub.EndElection(response)
             #print(f"[Election] - election completed successfully. Coordinator ID is {response.leader_id}")
@@ -296,7 +296,7 @@ def try_election(id):
     for i in range(1, MAX_NODES+1):
         if i == id:
             continue
-        with grpc.insecure_channel(f'192.168.76.5{id}:{i}') as channel:
+        with grpc.insecure_channel(f'192.168.76.5{i}:50051') as channel:
             stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
             try:
                 stub.Ping(tictactoe_pb2.Empty())
@@ -326,7 +326,7 @@ def check_command_correctness(command):
     
 def get_id():
     for i in range(1, MAX_NODES+1):
-        with grpc.insecure_channel(f'192.168.76.5{id}:{i}') as channel:
+        with grpc.insecure_channel(f'192.168.76.5{i}:50051') as channel:
             stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
             try:
                 stub.Ping(tictactoe_pb2.Empty())
@@ -371,7 +371,7 @@ def serve():
 
         while True:
             player_input = input(f"Node-50051> ")
-            with grpc.insecure_channel(f'192.168.76.5{id}:50051') as channel:
+            with grpc.insecure_channel(f'192.168.76.5{leader_id}:50051') as channel:
                 stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
                 response = stub.Coordinator(tictactoe_pb2.CoordinatorRequest(command=player_input, game_id=0, player_id=id))
                 print(f"{response.msg}")
