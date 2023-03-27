@@ -223,10 +223,10 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
     def GetDateTime(self, request, context):
         current_time = self.date_time
         response = tictactoe_pb2.DateTimeResponse()
-        #response.date_time = current_time.strftime(
-        #    "%Y-%m-%d %H:%M:%S.%f")[:-3] + "Z"
-        response.date_time = datetime.datetime.utcnow().strftime(
+        response.date_time = current_time.strftime(
             "%Y-%m-%d %H:%M:%S.%f")[:-3] + "Z"
+        #response.date_time = datetime.datetime.utcnow().strftime(
+        #    "%Y-%m-%d %H:%M:%S.%f")[:-3] + "Z"
         return response
 
 
@@ -234,7 +234,7 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
         if request.adjustment:
             #print(f"[Time sync] - old: {self.date_time}")
             #print(f"[Time sync] - adjustment: {request.adjustment}")
-            self.date_time = datetime.datetime.utcnow() + datetime.timedelta(seconds=float(request.adjustment))
+            self.date_time += datetime.timedelta(seconds=float(request.adjustment))
             #self.date_time += datetime.timedelta(seconds=float(request.adjustment))
             print(f"[Time sync]: {self.date_time}")
         else:
@@ -298,6 +298,7 @@ def time_sync(i):
     average_time = datetime.datetime.fromtimestamp(sum(map(datetime.datetime.timestamp, responded_times.values(
     ))) / len(responded_times.values()))  # https://stackoverflow.com/a/39757012
     adjustments = dict()
+    print(average_time)
     for key in responded_times.keys():
         adjustments[key] = str(
             (average_time - responded_times[key]).total_seconds())
