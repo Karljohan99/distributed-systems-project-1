@@ -75,8 +75,9 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
         
         game = self.games[request.game_id]
         
-        try:
-            players = game.get_players()
+        players = game.get_players()
+        if request.player_id in players:
+            print('test1')
             player_index = players.index(request.player_id)
             if self.moves.index(game.get_move()) == player_index:
                 try:
@@ -90,8 +91,8 @@ class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
                 with grpc.insecure_channel(f'localhost:{request.player_id}') as channel:
                     stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
                     command = stub.Input(tictactoe_pb2.GetInput(id=request.player_id))
-        except:
-            # TODO
+        else:
+            print('test2')
             with grpc.insecure_channel(f'localhost:{request.player_id}') as channel:
                 stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
                 command = stub.Input(tictactoe_pb2.GetInput(id=request.player_id))
