@@ -359,7 +359,7 @@ def serve():
 
         while True:
             player_input = input(f"Node-{id}> ")
-            with grpc.insecure_channel(f'localhost:{leader_id}') as channel:
+            with grpc.insecure_channel(f'[::]:{leader_id}') as channel:
                 stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
                 response = stub.Coordinator(tictactoe_pb2.CoordinatorRequest(command=player_input, game_id=0, player_id=id))
                 print(f"{response.msg}")
