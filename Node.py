@@ -7,7 +7,7 @@ from tictactoe import TicTacToe
 import tictactoe_pb2
 import tictactoe_pb2_grpc
 
-MAX_NODES = 3
+MAX_NODES = 5
 LOCALHOST = True
 
 class TicTacToeServicer(tictactoe_pb2_grpc.TicTacToeServicer):
@@ -310,7 +310,7 @@ def initiate_election(id):
         response = stub.StartElection(
             tictactoe_pb2.ElectionMessage(prev_ids=li))
         if response.success:
-            for i in range(1, 4):
+            for i in range(1, MAX_NODES+1):
                 with grpc.insecure_channel(f'localhost:{i}' if LOCALHOST else f'192.168.76.5{i}:50051') as channel:
                     stub = tictactoe_pb2_grpc.TicTacToeStub(channel)
                     stub.EndElection(response)
